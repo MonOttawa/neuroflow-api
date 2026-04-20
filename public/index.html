@@ -43,20 +43,34 @@
     }
 
     /* ── Layout ── */
-    #session-ui { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 22px; }
-    #session-ui.active { display: flex; }
-
-    #idle-ui {
+    #app-shell {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       height: 100%;
+      width: 100%;
+      padding: 16px 24px 24px;
       gap: 12px;
-      padding: 24px;
       overflow-y: auto;
     }
-    #idle-ui.hidden { display: none; }
+
+    #top-bar {
+      text-align: center;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    #content-area {
+      width: 100%;
+      max-width: 340px;
+      flex: 1;
+    }
+
+    .panel { display: none; flex-direction: column; align-items: center; gap: 12px; }
+    .panel.active { display: flex; }
+
+    #session-ui { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 22px; }
+    #session-ui.active { display: flex; }
 
     /* ── Typography ── */
     h1 {
@@ -390,18 +404,10 @@
       color: var(--accent-glow);
     }
 
-    /* ── Dashboard ── */
-    #dashboard-ui {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      height: 100%;
+    /* ── Dashboard panel ── */
+    #dashboard-panel {
       width: 100%;
-      padding: 16px 24px 24px;
-      overflow-y: auto;
-      gap: 8px;
     }
-    #dashboard-ui.active { display: flex; }
 
     .dash-cards {
       display: grid;
@@ -589,16 +595,16 @@
   </div>
 </div>
 
-<!-- Idle UI -->
-<div id="idle-ui">
-  <p class="ritz">Ad Astra</p>
-  <h1>Neuroflow</h1>
-  <p class="tagline">binaural beats and flicker &mdash; color matched to your goal</p>
+<!-- App shell: tabs are always visible, content switches below -->
+<div id="app-shell">
 
-  <!-- Nav tabs -->
-  <div id="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('session')">session</button>
-    <button class="nav-tab" onclick="switchTab('dashboard')">dashboard</button>
+  <!-- Top bar: branding + nav -->
+  <div id="top-bar">
+    <p class="ritz">Ad Astra &middot; Neuroflow</p>
+    <div id="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('session')">session</button>
+      <button class="nav-tab" onclick="switchTab('dashboard')">dashboard</button>
+    </div>
   </div>
 
   <!-- Auth bar -->
@@ -615,7 +621,13 @@
     daily free sessions used &mdash; <a onclick="openAuthModal()">sign up free</a> for unlimited
   </div>
 
-  <div class="preset-grid">
+  <!-- Content panels (only one visible at a time) -->
+  <div id="content-area">
+
+    <!-- Session panel -->
+    <div id="session-panel" class="panel">
+      <p class="tagline">binaural beats and flicker &mdash; color matched to your goal</p>
+      <div class="preset-grid">
     <button class="preset-btn" data-freq="6"
       style="--preset-color:#b02020;"
       onclick="selectPreset(6,'#b02020','#cc3333','rgba(176,32,32,0.55)','deep red · theta · deep meditation')">
@@ -667,15 +679,11 @@
     </div>
     <button id="start-btn" onclick="startSession()">begin session</button>
   </div>
-</div>
+    </div><!-- end session-panel -->
 
-<!-- Dashboard UI -->
-<div id="dashboard-ui">
-  <p class="ritz" style="margin-top:8px">your practice</p>
-  <h2 style="font-size:1.4rem;color:var(--accent-glow);margin-bottom:16px">dashboard</h2>
-
-  <!-- Stats cards -->
-  <div class="dash-cards">
+    <!-- Dashboard panel -->
+    <div id="dashboard-panel" class="panel">
+      <div class="dash-cards">
     <div class="dash-card">
       <div class="dash-card-value" id="dash-streak">0</div>
       <div class="dash-card-label">day streak</div>
@@ -713,7 +721,10 @@
   </div>
 
   <p style="font-size:0.7rem;color:var(--text-dim);opacity:0.5;margin-top:12px;text-align:center">sign in to track your progress</p>
-</div>
+    </div><!-- end dashboard-panel -->
+
+  </div><!-- end content-area -->
+</div><!-- end app-shell -->
 
 <!-- Active Session UI -->
 <div id="session-ui">
@@ -963,9 +974,9 @@
       }
     }
 
-    const idle  = document.getElementById('idle-ui');
+    const appShell = document.getElementById('app-shell');
     const sess  = document.getElementById('session-ui');
-    idle.classList.add('hidden');
+    appShell.style.display = 'none';
     sess.classList.add('active');
 
     document.getElementById('freq-num').textContent = selectedFreq;
@@ -1027,7 +1038,7 @@
 
   function showIdle() {
     document.getElementById('session-ui').classList.remove('active');
-    document.getElementById('idle-ui').classList.remove('hidden');
+    document.getElementById('app-shell').style.display = '';
     document.getElementById('timer-display').textContent = formatTime(selectedDur * 60);
     document.getElementById('progress-arc').style.strokeDashoffset = 565.48;
     document.getElementById('progress-arc').style.stroke = 'var(--accent-glow)';
@@ -1170,17 +1181,10 @@
       if (b.textContent === tab) b.classList.add('active');
     });
 
-    const idleUi = document.getElementById('idle-ui');
-    const dashUi = document.getElementById('dashboard-ui');
+    document.getElementById('session-panel').classList.toggle('active', tab === 'session');
+    document.getElementById('dashboard-panel').classList.toggle('active', tab === 'dashboard');
 
-    if (tab === 'session') {
-      idleUi.style.display = '';
-      dashUi.classList.remove('active');
-    } else {
-      idleUi.style.display = 'none';
-      dashUi.classList.add('active');
-      loadDashboard();
-    }
+    if (tab === 'dashboard') loadDashboard();
   }
 
   // ─── Dashboard ────────────────────────────────────────────────────────
@@ -1324,6 +1328,8 @@
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   updateAuthUI();
+  // Ensure session panel is active on load
+  document.getElementById('session-panel').classList.add('active');
 
   // Show correct auth state on load
   if (authUser) {
