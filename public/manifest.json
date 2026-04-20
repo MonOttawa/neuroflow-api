@@ -1,0 +1,22 @@
+{
+  "name": "Neuroflow",
+  "short_name": "Neuroflow",
+  "description": "Neural entrainment with binaural beats and flicker",
+  "start_url": "/Projects/ad-astra/neuroflow.html",
+  "display": "fullscreen",
+  "background_color": "#0d0000",
+  "theme_color": "#1a0000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230d0000'/><text x='96' y='128' text-anchor='middle' font-size='100' fill='%23e03030'>N</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230d0000'/><text x='256' y='340' text-anchor='middle' font-size='280' fill='%23e03030'>N</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -2,23 +2,22 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install deps first (layer cache friendly)
+# Install deps + su-exec for entrypoint privilege drop
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
-
-# Install su-exec for privilege dropping
 RUN apk add --no-cache su-exec
 
 # Create user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
 
-# Copy source code
+# Copy source + frontend
 COPY --chown=nodeapp:nodejs . .
 
-# Entrypoint runs as root to fix volume permissions, then drops to nodeapp
+# Entrypoint: fix volume perms then drop to nodeapp
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+USER nodeapp
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

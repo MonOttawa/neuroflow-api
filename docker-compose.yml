@@ -1,33 +1,24 @@
-# Neuroflow API — lab compose
-# Deploy via Dokploy: create compose stack, paste this as composeFile
-version: '3.8'
-
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: neuroflow-api:latest
+  neuroflow:
+    image: ghcr.io/monottawa/neuroflow-api:latest
+    pull_policy: always
     restart: unless-stopped
+    ports:
+      - "3001:3001"
     environment:
       NODE_ENV: production
-      PORT: 3001
+      PORT: "3001"
       DB_PATH: /data/neuroflow.db
-      JWT_SECRET: "${JWT_SECRET}"
-      CORS_ORIGIN: "${CORS_ORIGIN}"
+      CORS_ORIGIN: "*"
+    env_file:
+      - .env
     volumes:
       - neuroflow-data:/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
 volumes:
   neuroflow-data:
     driver: local
+
+networks:
+  dokploy-network:
+    external: true

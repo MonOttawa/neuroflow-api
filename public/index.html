@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Neuroflow</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d0000">
+  <meta name="description" content="Neural entrainment with binaural beats and flicker">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0000;
+      --surface: #1a0808;
+      --surface2: #2a1010;
+      --text: #f0e0e0;
+      --text-dim: #aa8888;
+      --accent: #e05020;
+      --accent-glow: #ff7744;
+      --accent-dim: rgba(224,80,32,0.55);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Fredoka', sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    #flicker-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 100;
+    }
+
+    /* ── Layout ── */
+    #session-ui { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 22px; }
+    #session-ui.active { display: flex; }
+
+    #idle-ui {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    #idle-ui.hidden { display: none; }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: clamp(2.5rem, 8vw, 4rem);
+      font-weight: 600;
+      color: var(--accent-glow);
+      text-shadow: 0 0 40px var(--accent-dim);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .tagline {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.5;
+    }
+
+    .ritz {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      opacity: 0.6;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    /* ── Auth bar ── */
+    #auth-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    #user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      flex: 1;
+    }
+
+    #user-plan-badge {
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 0.72rem;
+      color: var(--accent-glow);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    #user-plan-badge.pro { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .auth-btn {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 10px;
+      padding: 7px 14px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .auth-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Preset grid ── */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .preset-btn {
+      background: var(--surface);
+      border: 2px solid var(--surface2);
+      border-radius: 16px;
+      padding: 14px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.25s, background 0.25s, transform 0.1s;
+      color: var(--text);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.95rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+    }
+    .preset-btn:hover { border-color: var(--accent); background: var(--surface2); }
+    .preset-btn:active { transform: scale(0.97); }
+    .preset-btn.selected {
+      border-color: var(--accent-glow);
+      background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+      box-shadow: 0 0 20px var(--accent-dim);
+    }
+
+    .color-swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--preset-color);
+      box-shadow: 0 0 14px var(--preset-color), 0 0 28px color-mix(in srgb, var(--preset-color) 40%, transparent);
+      flex-shrink: 0;
+    }
+
+    .preset-btn .hz   { font-size: 1.65rem; font-weight: 600; color: var(--text); line-height: 1; }
+    .preset-btn .goal { font-size: 0.7rem;  color: var(--text-dim); line-height: 1.3; }
+    .preset-btn .color-label { font-size: 0.66rem; color: var(--text-dim); opacity: 0.7; }
+
+    /* ── Duration ── */
+    .duration-row { display: flex; gap: 8px; align-items: center; }
+    .dur-btn {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 10px;
+      padding: 6px 12px;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.86rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .dur-btn:hover { border-color: var(--accent); color: var(--text); }
+    .dur-btn.selected { border-color: var(--accent-glow); color: var(--accent-glow); }
+    .dur-label { font-size: 0.8rem; color: var(--text-dim); min-width: 68px; }
+
+    /* ── Controls row ── */
+    .controls-col { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
+
+    /* ── Start button ── */
+    #start-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 50px;
+      padding: 17px 50px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 40px var(--accent-dim);
+      transition: transform 0.1s, box-shadow 0.2s;
+      width: 100%;
+    }
+    #start-btn:hover { transform: scale(1.03); box-shadow: 0 0 60px var(--accent-dim); }
+    #start-btn:active { transform: scale(0.98); }
+
+    /* ── Session UI ── */
+    #status-text { font-size: 1.05rem; color: var(--accent-glow); text-align: center; }
+
+    #freq-display {
+      font-size: clamp(3rem, 12vw, 5rem);
+      font-weight: 600;
+      color: var(--accent-glow);
+      text-shadow: 0 0 60px var(--accent-dim);
+      line-height: 1;
+      text-align: center;
+    }
+    #freq-display .hz-unit  { font-size: 0.42em; color: var(--text-dim); vertical-align: baseline; }
+    #freq-display .freq-label { font-size: 0.28em; color: var(--text-dim); display: block; margin-top: 6px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    #timer-display { font-size: 2.3rem; font-weight: 400; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+
+    #progress-ring-wrap { position: relative; width: 200px; height: 200px; }
+    #progress-ring { transform: rotate(-90deg); }
+    #progress-ring circle { fill: none; stroke-width: 6; }
+    #progress-ring .bg { stroke: var(--surface2); }
+    #progress-ring .fg { stroke: var(--accent-glow); stroke-linecap: round; transition: stroke-dashoffset 0.5s linear, stroke 0.4s; }
+
+    #drift-display { font-size: 0.76rem; color: var(--text-dim); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+
+    #stop-btn {
+      background: transparent;
+      border: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      border-radius: 50px;
+      padding: 10px 36px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    #stop-btn:hover { border-color: var(--accent); color: var(--accent-glow); }
+
+    /* ── Info / notes ── */
+    .color-info   { font-size: 0.73rem; color: var(--text-dim); text-align: center; max-width: 280px; opacity: 0.75; line-height: 1.4; min-height: 2.6em; }
+    .gamma-note   { font-size: 0.7rem;  color: var(--text-dim); text-align: center; max-width: 280px; opacity: 0.65; }
+
+    /* ── Volume ── */
+    .vol-row  { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .vol-label { font-size: 0.8rem; color: var(--text-dim); min-width: 50px; }
+    #vol-slider { flex: 1; accent-color: var(--accent-glow); cursor: pointer; }
+
+    /* ── Free limit banner ── */
+    #limit-banner {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      text-align: center;
+      width: 100%;
+      max-width: 340px;
+    }
+    #limit-banner a { color: var(--accent-glow); text-decoration: none; }
+    #limit-banner.show { display: block; }
+
+    /* ── Auth modal ── */
+    #auth-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000000cc;
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    #auth-modal.open { display: flex; }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: 90%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title { font-size: 1.3rem; font-weight: 600; color: var(--accent-glow); text-align: center; }
+    .modal-subtitle { font-size: 0.85rem; color: var(--text-dim); text-align: center; margin-top: -10px; }
+
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .form-field label { font-size: 0.8rem; color: var(--text-dim); }
+    .form-field input {
+      background: var(--bg);
+      border: 1px solid var(--surface2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-field input:focus { border-color: var(--accent); }
+
+    .modal-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .modal-btn:hover { opacity: 0.88; }
+    .modal-btn.ghost {
+      background: transparent;
+      border: 1px solid var(--surface2);
+      color: var(--text-dim);
+      font-size: 0.88rem;
+      padding: 8px;
+    }
+    .modal-btn.ghost:hover { border-color: var(--accent); color: var(--text); }
+
+    .modal-error { font-size: 0.8rem; color: #ff5555; text-align: center; min-height: 1.2em; }
+    .modal-link { font-size: 0.8rem; color: var(--text-dim); text-align: center; }
+    .modal-link a { color: var(--accent-glow); cursor: pointer; text-decoration: underline; }
+
+    /* ── Install banner ── */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-size: 0.86rem;
+      color: var(--text);
+      z-index: 200;
+      cursor: pointer;
+      box-shadow: 0 4px 20px #00000088;
+    }
+    #install-banner.show { display: block; }
+  </style>
+</head>
+<body>
+
+<div id="flicker-canvas"></div>
+
+<!-- Auth Modal -->
+<div id="auth-modal">
+  <div class="modal-card">
+    <div id="modal-login">
+      <div class="modal-title">sign in</div>
+      <div class="form-field">
+        <label>email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-field">
+        <label>password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="modal-error" id="login-error"></div>
+      <button class="modal-btn" onclick="doLogin()">sign in</button>
+      <div class="modal-link">no account? <a onclick="showRegister()">register free</a></div>
+    </div>
+    <div id="modal-register" style="display:none">
+      <div class="modal-title">create account</div>
+      <div class="modal-subtitle">free forever — 3 sessions/day</div>
+      <div class="form-field">
+        <label>email</label>
+        <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="form-field">
+        <label>password <span style="opacity:0.5;font-size:0.72rem">(min 8 chars)</span></label>
+        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="modal-error" id="reg-error"></div>
+      <button class="modal-btn" onclick="doRegister()">create account</button>
+      <div class="modal-link">already registered? <a onclick="showLogin()">sign in</a></div>
+    </div>
+    <button class="modal-btn ghost" onclick="closeAuthModal()" style="margin-top:-4px">cancel</button>
+  </div>
+</div>
+
+<!-- Idle UI -->
+<div id="idle-ui">
+  <p class="ritz">Ad Astra</p>
+  <h1>Neuroflow</h1>
+  <p class="tagline">binaural beats and flicker &mdash; color matched to your goal</p>
+
+  <!-- Auth bar -->
+  <div id="auth-bar">
+    <div id="user-info" style="display:none">
+      <span id="user-email"></span>
+      <span id="user-plan-badge">free</span>
+    </div>
+    <button class="auth-btn" id="auth-action-btn" onclick="openAuthModal()">sign in</button>
+  </div>
+
+  <!-- Free tier limit banner -->
+  <div id="limit-banner">
+    daily free sessions used &mdash; <a onclick="openAuthModal()">sign up free</a> for unlimited
+  </div>
+
+  <div class="preset-grid">
+    <button class="preset-btn" data-freq="6"
+      style="--preset-color:#b02020;"
+      onclick="selectPreset(6,'#b02020','#cc3333','rgba(176,32,32,0.55)','deep red · theta · deep meditation')">
+      <div class="color-swatch"></div>
+      <span class="hz">6 Hz</span>
+      <span class="goal">Theta &mdash; deep meditation</span>
+      <span class="color-label">deep red</span>
+    </button>
+    <button class="preset-btn selected" data-freq="10"
+      style="--preset-color:#e05020;"
+      onclick="selectPreset(10,'#e05020','#ff7744','rgba(224,80,32,0.55)','red-orange · alpha · relaxation')">
+      <div class="color-swatch"></div>
+      <span class="hz">10 Hz</span>
+      <span class="goal">Alpha &mdash; relaxation</span>
+      <span class="color-label">red-orange</span>
+    </button>
+    <button class="preset-btn" data-freq="20"
+      style="--preset-color:#2080cc;"
+      onclick="selectPreset(20,'#2080cc','#44aaff','rgba(32,128,204,0.55)','blue · beta · focus &amp; alertness')">
+      <div class="color-swatch"></div>
+      <span class="hz">20 Hz</span>
+      <span class="goal">Beta &mdash; focus</span>
+      <span class="color-label">blue</span>
+    </button>
+    <button class="preset-btn" data-freq="40"
+      style="--preset-color:#e08020;"
+      onclick="selectPreset(40,'#e08020','#ffbb44','rgba(224,128,32,0.55)','amber · gamma · aspiration')">
+      <div class="color-swatch"></div>
+      <span class="hz">40 Hz</span>
+      <span class="goal">Gamma &mdash; aspiration</span>
+      <span class="color-label">amber</span>
+    </button>
+  </div>
+
+  <p class="color-info" id="color-info">red-orange &mdash; strongest for alpha &amp; gamma per the literature</p>
+  <p class="gamma-note" id="gamma-note" style="display:none">40 Hz: LCDs cap at ~60 Hz so visual flicker is approximate; binaural audio is always accurate</p>
+
+  <div class="controls-col">
+    <div class="duration-row">
+      <span class="dur-label">duration</span>
+      <button class="dur-btn" onclick="selectDur(this, 5)">5 min</button>
+      <button class="dur-btn selected" onclick="selectDur(this, 10)">10 min</button>
+      <button class="dur-btn" onclick="selectDur(this, 20)">20 min</button>
+      <button class="dur-btn" onclick="selectDur(this, 30)">30 min</button>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">volume</span>
+      <input type="range" id="vol-slider" min="0" max="100" value="50">
+    </div>
+    <button id="start-btn" onclick="startSession()">begin session</button>
+  </div>
+</div>
+
+<!-- Active Session UI -->
+<div id="session-ui">
+  <p class="ritz">Neuroflow</p>
+  <div id="freq-display">
+    <span id="freq-num">10</span><span class="hz-unit">Hz</span>
+    <span class="freq-label" id="freq-goal-label">alpha &mdash; relaxation</span>
+  </div>
+  <div id="progress-ring-wrap">
+    <svg id="progress-ring" width="200" height="200" viewBox="0 0 200 200">
+      <circle class="bg" cx="100" cy="100" r="90"/>
+      <circle class="fg" id="progress-arc" cx="100" cy="100" r="90"
+        stroke-dasharray="565.48" stroke-dashoffset="565.48"/>
+    </svg>
+  </div>
+  <div id="timer-display">10:00</div>
+  <div id="status-text">fading in&hellip;</div>
+  <div id="drift-display"></div>
+  <button id="stop-btn" onclick="stopSession()">end session</button>
+</div>
+
+<div id="install-banner" onclick="installPWA()">install Neuroflow &darr;</div>
+
+<script>
+  // ─── Config ────────────────────────────────────────────────────────────
+  // In production, set this to the deployed API URL
+  // For lab: leave empty to use relative URLs (same origin)
+  const API_BASE = '';  // empty = same origin (API serves this static file too)
+
+  // ─── Color presets ─────────────────────────────────────────────────────
+  const PRESETS = {
+    6:  { color: '#b02020', glow: '#cc3333', dim: 'rgba(176,32,32,0.55)',  label: 'deep red',    info: 'deep red &mdash; traditional for theta &amp; deep states' },
+    10: { color: '#e05020', glow: '#ff7744', dim: 'rgba(224,80,32,0.55)',  label: 'red-orange',  info: 'red-orange &mdash; strongest for alpha &amp; gamma per the literature' },
+    20: { color: '#2080cc', glow: '#44aaff', dim: 'rgba(32,128,204,0.55)', label: 'blue',        info: 'blue &mdash; ipRGC alertness pathway, boosts beta band EEG' },
+    40: { color: '#e08020', glow: '#ffbb44', dim: 'rgba(224,128,32,0.55)', label: 'amber',        info: 'amber/red &mdash; best SSVEP response at 40 Hz per Scientific Reports' },
+  };
+
+  // ─── State ─────────────────────────────────────────────────────────────
+  let selectedFreq  = 10;
+  let selectedDur   = 10;
+  let activeColor  = PRESETS[10].color;
+  let activeGlow   = PRESETS[10].glow;
+  let activeDim    = PRESETS[10].dim;
+  let activeGoal   = 'alpha &mdash; relaxation';
+
+  // Web Audio
+  let audioCtx  = null;
+  let gainNode  = null;
+  let leftOsc   = null;
+  let rightOsc  = null;
+  let leftGain  = null;
+  let rightGain = null;
+
+  // Session
+  let flickerOn    = false;
+  let sessionStart = 0;
+  let totalMs      = 0;
+  let rafId        = null;
+  let currentSessionId = null;  // API session ID
+
+  // Auth state
+  let authToken = localStorage.getItem('nf_token') || null;
+  let authUser  = JSON.parse(localStorage.getItem('nf_user') || 'null');
+
+  // ─── Device ID ─────────────────────────────────────────────────────────
+  function getDeviceId() {
+    let did = localStorage.getItem('nf_device_id');
+    if (!did) {
+      did = crypto.randomUUID();
+      localStorage.setItem('nf_device_id', did);
+    }
+    return did;
+  }
+
+  // ─── Auth helpers ──────────────────────────────────────────────────────
+  function api(endpoint, options = {}) {
+    const url  = API_BASE + endpoint;
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    return fetch(url, { ...options, headers }).then(async r => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw { status: r.status, body: j };
+      return j;
+    });
+  }
+
+  function updateAuthUI() {
+    const userInfo    = document.getElementById('user-info');
+    const authBtn     = document.getElementById('auth-action-btn');
+    const planBadge   = document.getElementById('user-plan-badge');
+    const userEmail   = document.getElementById('user-email');
+    const limitBanner = document.getElementById('limit-banner');
+
+    if (authUser) {
+      userEmail.textContent = authUser.email || '';
+      userInfo.style.display = 'flex';
+      authBtn.textContent = 'sign out';
+      planBadge.textContent = authUser.plan || 'free';
+      planBadge.className = authUser.plan === 'pro' ? 'pro' : '';
+      limitBanner.classList.remove('show');
+    } else {
+      userInfo.style.display = 'none';
+      authBtn.textContent = 'sign in';
+      planBadge.textContent = 'free';
+      planBadge.className = '';
+      // Show limit banner if device has hit daily limit
+      checkAnonLimit();
+    }
+  }
+
+  async function checkAnonLimit() {
+    if (authUser) return;
+    try {
+      const r = await api('/sessions', { method: 'POST', body: JSON.stringify({
+        frequency: selectedFreq, duration: 0, color: activeColor, deviceId: getDeviceId()
+      })});
+    } catch(e) {
+      if (e.status === 429) {
+        document.getElementById('limit-banner').classList.add('show');
+        document.getElementById('start-btn').disabled = true;
+      }
+    }
+  }
+
+  function openAuthModal() {
+    if (authUser) {
+      // Sign out
+      authToken = null;
+      authUser  = null;
+      localStorage.removeItem('nf_token');
+      localStorage.removeItem('nf_user');
+      updateAuthUI();
+      return;
+    }
+    document.getElementById('auth-modal').classList.add('open');
+    showLogin();
+  }
+
+  function closeAuthModal() {
+    document.getElementById('auth-modal').classList.remove('open');
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('reg-error').textContent  = '';
+  }
+
+  function showLogin() {
+    document.getElementById('modal-login').style.display    = '';
+    document.getElementById('modal-register').style.display = 'none';
+  }
+
+  function showRegister() {
+    document.getElementById('modal-login').style.display    = 'none';
+    document.getElementById('modal-register').style.display = '';
+  }
+
+  async function doLogin() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl    = document.getElementById('login-error');
+    errEl.textContent = '';
+    try {
+      const res = await api('/auth/login', {
+        method: 'POST', body: JSON.stringify({ email, password })
+      });
+      authToken = res.token;
+      authUser  = res.user;
+      localStorage.setItem('nf_token', authToken);
+      localStorage.setItem('nf_user',   JSON.stringify(authUser));
+      closeAuthModal();
+      updateAuthUI();
+    } catch(e) {
+      errEl.textContent = (e.body?.error) || 'login failed';
+    }
+  }
+
+  async function doRegister() {
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const errEl   = document.getElementById('reg-error');
+    errEl.textContent = '';
+    try {
+      const res = await api('/auth/register', {
+        method: 'POST', body: JSON.stringify({ email, password })
+      });
+      authToken = res.token;
+      authUser  = res.user;
+      localStorage.setItem('nf_token', authToken);
+      localStorage.setItem('nf_user',   JSON.stringify(authUser));
+      closeAuthModal();
+      updateAuthUI();
+    } catch(e) {
+      errEl.textContent = (e.body?.error) || 'registration failed';
+    }
+  }
+
+  // ─── Theme ─────────────────────────────────────────────────────────────
+  function applyTheme(freq) {
+    const p = PRESETS[freq];
+    if (!p) return;
+    activeColor = p.color;
+    activeGlow  = p.glow;
+    activeDim   = p.dim;
+    const root = document.documentElement;
+    root.style.setProperty('--accent',       p.color);
+    root.style.setProperty('--accent-glow',  p.glow);
+    root.style.setProperty('--accent-dim',   p.dim);
+  }
+
+  // ─── Preset / Dur controls ────────────────────────────────────────────
+  function selectPreset(freq, color, glow, dim, goal) {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      if (parseInt(b.dataset.freq) === freq) b.classList.add('selected');
+    });
+    selectedFreq = freq;
+    activeGoal   = goal;
+    applyTheme(freq);
+    document.getElementById('color-info').innerHTML  = PRESETS[freq].info;
+    document.getElementById('gamma-note').style.display = freq === 40 ? 'block' : 'none';
+    // Re-check limit when freq changes (for anon users)
+    if (!authUser) {
+      document.getElementById('limit-banner').classList.remove('show');
+      document.getElementById('start-btn').disabled = false;
+      checkAnonLimit();
+    }
+  }
+
+  function selectDur(btn, mins) {
+    document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedDur = mins;
+  }
+
+  // ─── Session ─────────────────────────────────────────────────────────────
+  async function startSession() {
+    // Check anon limit before starting
+    if (!authUser) {
+      try {
+        await api('/sessions', {
+          method: 'POST',
+          body: JSON.stringify({ frequency: selectedFreq, duration: 0, color: activeColor, deviceId: getDeviceId() })
+        });
+      } catch(e) {
+        if (e.status === 429) {
+          document.getElementById('limit-banner').classList.add('show');
+          return;
+        }
+      }
+    }
+
+    const idle  = document.getElementById('idle-ui');
+    const sess  = document.getElementById('session-ui');
+    idle.classList.add('hidden');
+    sess.classList.add('active');
+
+    document.getElementById('freq-num').textContent = selectedFreq;
+    document.getElementById('freq-goal-label').textContent = activeGoal;
+    document.getElementById('progress-arc').style.stroke = activeGlow;
+
+    totalMs   = selectedDur * 60 * 1000;
+    sessionStart = performance.now();
+    const volume = document.getElementById('vol-slider').value / 100;
+
+    // Log session to API
+    try {
+      const res = await api('/sessions', {
+        method: 'POST',
+        body: JSON.stringify({
+          frequency: selectedFreq,
+          duration: selectedDur,
+          color: activeColor,
+          deviceId: authUser ? undefined : getDeviceId(),
+        })
+      });
+      currentSessionId = res.id;
+    } catch(e) {
+      currentSessionId = null; // continue without logging
+    }
+
+    initAudio();
+    startFlicker(selectedFreq, activeColor, activeGlow);
+
+    flickerOn = true;
+    rafId = requestAnimationFrame(sessionTick);
+
+    setStatus('fading in\u2026');
+    fadeIn(volume);
+  }
+
+  function stopSession() {
+    setStatus('fading out\u2026');
+    fadeOut(() => {
+      cleanup();
+      showIdle();
+    });
+  }
+
+  function cleanup() {
+    flickerOn = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    stopFlicker();
+    try {
+      if (leftOsc)  { leftOsc.stop();  leftOsc.disconnect();  }
+      if (rightOsc) { rightOsc.stop(); rightOsc.disconnect(); }
+      if (gainNode) gainNode.disconnect();
+      if (audioCtx) audioCtx.close();
+    } catch(e) {}
+    leftOsc = rightOsc = gainNode = leftGain = rightGain = null;
+    audioCtx = null;
+    currentSessionId = null;
+  }
+
+  function showIdle() {
+    document.getElementById('session-ui').classList.remove('active');
+    document.getElementById('idle-ui').classList.remove('hidden');
+    document.getElementById('timer-display').textContent = formatTime(selectedDur * 60);
+    document.getElementById('progress-arc').style.strokeDashoffset = 565.48;
+    document.getElementById('progress-arc').style.stroke = 'var(--accent-glow)';
+    document.getElementById('drift-display').textContent = '';
+    // Reset start button
+    const startBtn = document.getElementById('start-btn');
+    startBtn.disabled = false;
+    if (!authUser) checkAnonLimit();
+  }
+
+  // ─── Audio ─────────────────────────────────────────────────────────────
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const carrier = 200;
+    const offset  = selectedFreq;
+
+    gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    gainNode.connect(audioCtx.destination);
+
+    leftGain = audioCtx.createGain();
+    leftGain.gain.value = 1;
+    leftGain.connect(gainNode);
+    leftOsc = audioCtx.createOscillator();
+    leftOsc.type = 'sine';
+    leftOsc.frequency.value = carrier;
+    leftOsc.connect(leftGain);
+    leftOsc.start();
+
+    rightGain = audioCtx.createGain();
+    rightGain.gain.value = 1;
+    rightGain.connect(gainNode);
+    rightOsc = audioCtx.createOscillator();
+    rightOsc.type = 'sine';
+    rightOsc.frequency.value = carrier + offset;
+    rightOsc.connect(rightGain);
+    rightOsc.start();
+  }
+
+  function fadeIn(volume) {
+    if (!gainNode) return;
+    const t = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(t);
+    gainNode.gain.setValueAtTime(0, t);
+    gainNode.gain.linearRampToValueAtTime(volume, t + 5);
+    flickerEl.style.transition = 'opacity 5s';
+    flickerEl.style.opacity   = '1';
+    setTimeout(() => setStatus('entraining\u2026'), 5000);
+  }
+
+  function fadeOut(callback) {
+    if (!gainNode) { callback(); return; }
+    const t = audioCtx.currentTime;
+    gainNode.gain.cancelScheduledValues(t);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, t);
+    gainNode.gain.linearRampToValueAtTime(0, t + 5);
+    flickerEl.style.transition = 'opacity 5s';
+    flickerEl.style.opacity   = '0';
+    setTimeout(callback, 5200);
+  }
+
+  // ─── Animation Loop ────────────────────────────────────────────────────
+  const circumference = 2 * Math.PI * 90;
+
+  function sessionTick(now) {
+    if (!flickerOn) return;
+    const elapsed   = now - sessionStart;
+    const remaining = Math.max(0, totalMs - elapsed);
+    const progress  = Math.min(1, elapsed / totalMs);
+
+    document.getElementById('timer-display').textContent = formatTime(Math.ceil(remaining / 1000));
+    document.getElementById('progress-arc').style.strokeDashoffset = circumference * (1 - progress);
+
+    if (remaining <= 0) {
+      setStatus('session complete');
+      setTimeout(() => { fadeOut(() => { cleanup(); showIdle(); }); }, 2000);
+      return;
+    }
+    rafId = requestAnimationFrame(sessionTick);
+  }
+
+  // ─── Flicker ────────────────────────────────────────────────────────────
+  const flickerEl = document.getElementById('flicker-canvas');
+
+  function startFlicker(freqHz, color, glow) {
+    const cycle = 1 / freqHz;
+    const animName = `nflicker-${Date.now()}`;
+    const style = document.createElement('style');
+    style.id = 'flicker-style';
+    style.textContent = `
+      @keyframes ${animName} {
+        0%, 49.99% { background: ${color}; box-shadow: inset 0 0 80px ${glow}; }
+        50%, 100%   { background: transparent; box-shadow: none; }
+      }
+      .flickering { animation: ${animName} ${cycle}s linear infinite; }
+    `;
+    document.head.appendChild(style);
+    flickerEl.classList.remove('flickering');
+    void flickerEl.offsetWidth;
+    flickerEl.classList.add('flickering');
+  }
+
+  function stopFlicker() {
+    flickerEl.classList.remove('flickering');
+    const old = document.getElementById('flicker-style');
+    if (old) old.remove();
+    flickerEl.style.background = 'transparent';
+    flickerEl.style.boxShadow = 'none';
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────
+  function formatTime(secs) {
+    return `${Math.floor(secs/60)}:${(secs%60).toString().padStart(2,'0')}`;
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status-text').textContent = msg;
+  }
+
+  // ─── PWA Install ───────────────────────────────────────────────────────
+  let deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstall = e;
+    document.getElementById('install-banner').classList.add('show');
+  });
+  function installPWA() {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    deferredInstall.userChoice.then(() => { deferredInstall = null; document.getElementById('install-banner').classList.remove('show'); });
+  }
+
+  // ─── Init ──────────────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+  updateAuthUI();
+
+  // Show correct auth state on load
+  if (authUser) {
+    // Future: fetch latest user plan from API
+  }
+</script>
+</body>
+</html>
