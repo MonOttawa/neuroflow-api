@@ -21,12 +21,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/neuroflow-api
-          tags: latest
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -34,4 +28,14 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
+          tags: ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
+          build-args: |
+            GITHUB_REPOSITORY=${{ github.repository }}
           platforms: linux/amd64
+
+      # Fix tag case: monottawa not MonOttawa
+      - name: Retag image as lowercase
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
+          docker tag ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest ghcr.io/monottawa/neuroflow-api:latest
+          docker push ghcr.io/monottawa/neuroflow-api:latest
