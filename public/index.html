@@ -361,6 +361,192 @@
       box-shadow: 0 4px 20px #00000088;
     }
     #install-banner.show { display: block; }
+
+    /* ── Nav tabs ── */
+    #nav-tabs {
+      display: flex;
+      gap: 0;
+      width: 100%;
+      max-width: 340px;
+      background: var(--surface);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--surface2);
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 8px 0;
+      background: transparent;
+      border: none;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active {
+      background: var(--surface2);
+      color: var(--accent-glow);
+    }
+
+    /* ── Dashboard ── */
+    #dashboard-ui {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+      padding: 16px 24px 24px;
+      overflow-y: auto;
+      gap: 8px;
+    }
+    #dashboard-ui.active { display: flex; }
+
+    .dash-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 340px;
+    }
+    .dash-card {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .dash-card-value {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--accent-glow);
+      line-height: 1.1;
+    }
+    .dash-card-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .dash-section {
+      width: 100%;
+      max-width: 340px;
+      margin-top: 8px;
+    }
+    .dash-section-title {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    /* Heatmap */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 3px;
+    }
+    .heatmap-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      background: var(--surface2);
+      transition: background 0.2s;
+      position: relative;
+    }
+    .heatmap-cell.l1 { background: color-mix(in srgb, var(--accent) 25%, var(--surface2)); }
+    .heatmap-cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--surface2)); }
+    .heatmap-cell.l3 { background: color-mix(in srgb, var(--accent) 75%, var(--surface2)); }
+    .heatmap-cell.l4 { background: var(--accent); }
+    .heatmap-week-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .heatmap-week-labels span {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      opacity: 0.5;
+    }
+
+    /* Frequency breakdown */
+    .freq-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--surface2);
+    }
+    .freq-row:last-child { border-bottom: none; }
+    .freq-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .freq-name {
+      font-size: 0.85rem;
+      color: var(--text);
+      flex: 1;
+    }
+    .freq-count {
+      font-size: 0.82rem;
+      color: var(--accent-glow);
+      font-weight: 600;
+      min-width: 40px;
+      text-align: right;
+    }
+    .freq-bar-bg {
+      flex: 2;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .freq-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* Recent sessions */
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--surface2);
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-color {
+      width: 8px;
+      height: 28px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .recent-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .recent-main {
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+    .recent-meta {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+    .recent-aborted {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      opacity: 0.6;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -408,6 +594,12 @@
   <p class="ritz">Ad Astra</p>
   <h1>Neuroflow</h1>
   <p class="tagline">binaural beats and flicker &mdash; color matched to your goal</p>
+
+  <!-- Nav tabs -->
+  <div id="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('session')">session</button>
+    <button class="nav-tab" onclick="switchTab('dashboard')">dashboard</button>
+  </div>
 
   <!-- Auth bar -->
   <div id="auth-bar">
@@ -475,6 +667,52 @@
     </div>
     <button id="start-btn" onclick="startSession()">begin session</button>
   </div>
+</div>
+
+<!-- Dashboard UI -->
+<div id="dashboard-ui">
+  <p class="ritz" style="margin-top:8px">your practice</p>
+  <h2 style="font-size:1.4rem;color:var(--accent-glow);margin-bottom:16px">dashboard</h2>
+
+  <!-- Stats cards -->
+  <div class="dash-cards">
+    <div class="dash-card">
+      <div class="dash-card-value" id="dash-streak">0</div>
+      <div class="dash-card-label">day streak</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-value" id="dash-total">0</div>
+      <div class="dash-card-label">sessions</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-value" id="dash-minutes">0</div>
+      <div class="dash-card-label">total min</div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-value" id="dash-today">0</div>
+      <div class="dash-card-label">today</div>
+    </div>
+  </div>
+
+  <!-- Weekly heatmap -->
+  <div class="dash-section">
+    <div class="dash-section-title">12 week activity</div>
+    <div id="heatmap-grid" class="heatmap-grid"></div>
+  </div>
+
+  <!-- Frequency breakdown -->
+  <div class="dash-section">
+    <div class="dash-section-title">frequency breakdown</div>
+    <div id="freq-breakdown" class="freq-breakdown"></div>
+  </div>
+
+  <!-- Recent sessions -->
+  <div class="dash-section">
+    <div class="dash-section-title">recent sessions</div>
+    <div id="recent-list" class="recent-list"></div>
+  </div>
+
+  <p style="font-size:0.7rem;color:var(--text-dim);opacity:0.5;margin-top:12px;text-align:center">sign in to track your progress</p>
 </div>
 
 <!-- Active Session UI -->
@@ -922,7 +1160,166 @@
     deferredInstall.userChoice.then(() => { deferredInstall = null; document.getElementById('install-banner').classList.remove('show'); });
   }
 
-  // ─── Init ──────────────────────────────────────────────────────────────
+  // ─── Tab Navigation ───────────────────────────────────────────────────
+  let currentTab = 'session';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(b => {
+      if (b.textContent === tab) b.classList.add('active');
+    });
+
+    const idleUi = document.getElementById('idle-ui');
+    const dashUi = document.getElementById('dashboard-ui');
+
+    if (tab === 'session') {
+      idleUi.style.display = '';
+      dashUi.classList.remove('active');
+    } else {
+      idleUi.style.display = 'none';
+      dashUi.classList.add('active');
+      loadDashboard();
+    }
+  }
+
+  // ─── Dashboard ────────────────────────────────────────────────────────
+  const FREQ_META = {
+    6:  { name: 'theta',  band: '6 Hz',  color: '#b02020' },
+    10: { name: 'alpha',  band: '10 Hz', color: '#e05020' },
+    20: { name: 'beta',   band: '20 Hz', color: '#2080cc' },
+    40: { name: 'gamma',  band: '40 Hz', color: '#e08020' },
+  };
+
+  async function loadDashboard() {
+    if (!authUser) {
+      renderEmptyDashboard();
+      return;
+    }
+    try {
+      const stats = await api('/sessions/stats');
+      renderDashboard(stats);
+    } catch(e) {
+      console.error('dashboard load failed', e);
+      renderEmptyDashboard();
+    }
+  }
+
+  function renderEmptyDashboard() {
+    document.getElementById('dash-streak').textContent = '0';
+    document.getElementById('dash-total').textContent = '0';
+    document.getElementById('dash-minutes').textContent = '0';
+    document.getElementById('dash-today').textContent = '0';
+    document.getElementById('heatmap-grid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;font-size:0.8rem;color:var(--text-dim);opacity:0.5">sign in to see your activity</div>';
+    document.getElementById('freq-breakdown').innerHTML = '';
+    document.getElementById('recent-list').innerHTML = '';
+  }
+
+  function renderDashboard(s) {
+    // Stats cards
+    document.getElementById('dash-streak').textContent = s.streak || 0;
+    document.getElementById('dash-total').textContent = s.total || 0;
+    document.getElementById('dash-minutes').textContent = s.totalMinutes || 0;
+    document.getElementById('dash-today').textContent = s.todaySessions || 0;
+
+    // Heatmap: 12 weeks x 7 days = 84 cells
+    renderHeatmap(s.weeklyActivity || []);
+
+    // Frequency breakdown
+    renderFreqBreakdown(s.frequencyBreakdown || []);
+
+    // Recent sessions
+    renderRecent(s.recentSessions || []);
+  }
+
+  function renderHeatmap(dailyRows) {
+    const grid = document.getElementById('heatmap-grid');
+    // Build lookup: day string -> count
+    const lookup = {};
+    dailyRows.forEach(r => lookup[r.day] = r.count);
+
+    // Generate 84 days (12 weeks), 7 columns per week
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Find the Sunday of this week (end of grid)
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const lastDay = new Date(today);
+    // We want to end on Saturday (the current or most recent Saturday)
+    lastDay.setDate(today.getDate() + (6 - dayOfWeek));
+
+    // 84 cells: 12 weeks x 7 days, starting 83 days before lastDay
+    let html = '';
+    for (let w = 11; w >= 0; w--) {
+      for (let d = 0; d < 7; d++) {
+        const cellDate = new Date(lastDay);
+        cellDate.setDate(lastDay.getDate() - (w * 7 + (6 - d)));
+        const dayStr = cellDate.toISOString().slice(0, 10);
+        const count = lookup[dayStr] || 0;
+        let level = '';
+        if (count >= 4) level = 'l4';
+        else if (count >= 3) level = 'l3';
+        else if (count >= 2) level = 'l2';
+        else if (count >= 1) level = 'l1';
+        html += '<div class="heatmap-cell ' + level + '" title="' + dayStr + ': ' + count + ' sessions"></div>';
+      }
+    }
+    grid.innerHTML = html;
+
+    // Week labels
+    const existing = grid.parentElement.querySelector('.heatmap-week-labels');
+    if (existing) existing.remove();
+    const labels = document.createElement('div');
+    labels.className = 'heatmap-week-labels';
+    labels.innerHTML = '<span>12w ago</span><span>8w</span><span>4w</span><span>now</span>';
+    grid.parentElement.appendChild(labels);
+  }
+
+  function renderFreqBreakdown(freqRows) {
+    const container = document.getElementById('freq-breakdown');
+    if (!freqRows.length) {
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-dim);opacity:0.5;padding:12px 0">no sessions yet</div>';
+      return;
+    }
+    const maxCount = Math.max(...freqRows.map(r => r.count), 1);
+    let html = '';
+    freqRows.forEach(r => {
+      const meta = FREQ_META[r.frequency] || { name: r.frequency + ' Hz', band: r.frequency + ' Hz', color: '#888' };
+      const pct = Math.round((r.count / maxCount) * 100);
+      html += '<div class="freq-row">' +
+        '<div class="freq-dot" style="background:' + meta.color + '"></div>' +
+        '<div class="freq-name">' + meta.band + ' ' + meta.name + '</div>' +
+        '<div class="freq-bar-bg"><div class="freq-bar-fill" style="width:' + pct + '%;background:' + meta.color + '"></div></div>' +
+        '<div class="freq-count">' + r.count + '</div>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function renderRecent(sessions) {
+    const container = document.getElementById('recent-list');
+    if (!sessions.length) {
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-dim);opacity:0.5;padding:12px 0">no sessions yet</div>';
+      return;
+    }
+    let html = '';
+    sessions.forEach(s => {
+      const meta = FREQ_META[s.frequency] || { name: s.frequency + ' Hz', band: s.frequency + ' Hz', color: '#888' };
+      const date = new Date(s.started_at * 1000);
+      const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+      const aborted = s.aborted ? '<span class="recent-aborted">(stopped early)</span>' : '';
+      html += '<div class="recent-item">' +
+        '<div class="recent-color" style="background:' + (s.color || meta.color) + '"></div>' +
+        '<div class="recent-info">' +
+          '<div class="recent-main">' + meta.band + ' ' + meta.name + ' &middot; ' + s.duration + ' min' + aborted + '</div>' +
+          '<div class="recent-meta">' + dateStr + ' at ' + timeStr + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  // ─── Init ──────────────────────────────────────────────────────────
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

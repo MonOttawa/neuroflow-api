@@ -76,13 +76,73 @@ router.get('/', (req, res) => {
 // GET /sessions/stats  — authenticated only
 router.get('/stats', (req, res) => {
   if (!req.userId) return res.status(401).json({ error: 'authentication required' });
-  const total = STMT.getSessionCount.get(req.userId)?.count || 0;
+  const uid = req.userId;
+
+  // Total sessions + total minutes
+  const total = STMT.getSessionCount.get(uid)?.count || 0;
+  const totalMinutesRow = db.prepare(
+    'SELECT COALESCE(SUM(duration),0) as mins FROM sessions WHERE user_id = ?'
+  ).get(uid);
+  const totalMinutes = totalMinutesRow.mins;
+
+  // Today
   const today = todayStr();
-  const todayStart = Math.floor(new Date(today).getTime() / 1000);
-  const todayCount = db.prepare(
-    'SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND started_at >= ?'
-  ).get(req.userId, todayStart)?.count || 0;
-  return res.json({ total, today: todayCount });
+  const todayStart = Math.floor(new Date(today + 'T00:00:00').getTime() / 1000);
+  const todayRow = db.prepare(
+    'SELECT COUNT(*) as count, COALESCE(SUM(duration),0) as mins FROM sessions WHERE user_id = ? AND started_at >= ?'
+  ).get(uid, todayStart);
+  const todaySessions = todayRow.count;
+  const todayMinutes = todayRow.mins;
+
+  // Streak: count consecutive days with at least 1 session, starting from today
+  const dayRows = db.prepare(
+    "SELECT DISTINCT substr(date(started_at, 'unixepoch'), 1, 10) as day FROM sessions WHERE user_id = ? ORDER BY day DESC"
+  ).all(uid);
+  let streak = 0;
+  const now = new Date();
+  for (let i = 0; i < dayRows.length; i++) {
+    const expected = new Date(now);
+    expected.setDate(expected.getDate() - i);
+    const expectedStr = expected.toISOString().slice(0, 10);
+    if (dayRows[i].day === expectedStr) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  // Frequency breakdown
+  const freqRows = db.prepare(
+    'SELECT frequency, COUNT(*) as count, COALESCE(SUM(duration),0) as mins FROM sessions WHERE user_id = ? GROUP BY frequency ORDER BY count DESC'
+  ).all(uid);
+
+  // Weekly activity: last 12 weeks (84 days), sessions per day
+  const twelveWeeksAgo = Math.floor(Date.now() / 1000) - 84 * 86400;
+  const dailyRows = db.prepare(
+    "SELECT substr(date(started_at, 'unixepoch'), 1, 10) as day, COUNT(*) as count FROM sessions WHERE user_id = ? AND started_at >= ? GROUP BY day ORDER BY day"
+  ).all(uid, twelveWeeksAgo);
+
+  // Recent sessions (last 10)
+  const recent = db.prepare(
+    'SELECT frequency, duration, color, started_at, completed_at, aborted FROM sessions WHERE user_id = ? ORDER BY started_at DESC LIMIT 10'
+  ).all(uid);
+
+  // Longest session ever
+  const longestRow = db.prepare(
+    'SELECT MAX(duration) as longest FROM sessions WHERE user_id = ?'
+  ).get(uid);
+
+  return res.json({
+    total,
+    totalMinutes,
+    todaySessions,
+    todayMinutes,
+    streak,
+    longestSession: longestRow.longest || 0,
+    frequencyBreakdown: freqRows,
+    weeklyActivity: dailyRows,
+    recentSessions: recent,
+  });
 });
 
 export default router;
