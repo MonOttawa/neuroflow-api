@@ -27,15 +27,6 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
-          tags: ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
-          build-args: |
-            GITHUB_REPOSITORY=${{ github.repository }}
+          tags: |
+            ghcr.io/monottawa/neuroflow-api:latest
           platforms: linux/amd64
-
-      # Fix tag case: monottawa not MonOttawa
-      - name: Retag image as lowercase
-        run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest
-          docker tag ghcr.io/${{ github.repository_owner }}/neuroflow-api:latest ghcr.io/monottawa/neuroflow-api:latest
-          docker push ghcr.io/monottawa/neuroflow-api:latest
