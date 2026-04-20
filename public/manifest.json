@@ -2,7 +2,7 @@
   "name": "Neuroflow",
   "short_name": "Neuroflow",
   "description": "Neural entrainment with binaural beats and flicker",
-  "start_url": "/Projects/ad-astra/neuroflow.html",
+    "start_url": "/",
   "display": "fullscreen",
   "background_color": "#0d0000",
   "theme_color": "#1a0000",

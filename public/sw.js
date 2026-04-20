@@ -1,7 +1,7 @@
 const CACHE = 'neuroflow-v1';
 const ASSETS = [
-  '/Projects/ad-astra/neuroflow.html',
-  '/Projects/ad-astra/manifest.json'
+  '/',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', event => {
