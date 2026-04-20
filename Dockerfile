@@ -6,9 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Create user and data dir FIRST
+# Create user, data dir, and chown BEFORE copying source
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
-RUN mkdir -p /app/data && chown -R nodeapp:nodejs /app/data
+RUN mkdir -p /data && chown -R nodeapp:nodejs /data
 
 # Copy source code
 COPY --chown=nodeapp:nodejs . .
