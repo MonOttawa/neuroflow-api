@@ -6,12 +6,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Data dir for SQLite (must be before USER switch)
-RUN mkdir -p /app/data
-
-# Production user
+# Create user and data dir FIRST
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
-RUN chown -R nodeapp:nodejs /app/data
+RUN mkdir -p /app/data && chown -R nodeapp:nodejs /app/data
+
+# Copy source code
+COPY --chown=nodeapp:nodejs . .
+
 USER nodeapp
 
 EXPOSE 3001
