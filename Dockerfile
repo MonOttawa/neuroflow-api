@@ -6,18 +6,23 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Create user, data dir, and chown BEFORE copying source
+# Install su-exec for privilege dropping
+RUN apk add --no-cache su-exec
+
+# Create user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodeapp -u 1001
-RUN mkdir -p /data && chown -R nodeapp:nodejs /data
 
 # Copy source code
 COPY --chown=nodeapp:nodejs . .
 
-USER nodeapp
+# Entrypoint runs as root to fix volume permissions, then drops to nodeapp
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "src/index.js"]
